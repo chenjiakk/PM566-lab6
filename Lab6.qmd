@@ -1,0 +1,146 @@
+---
+title: "Lab6"
+author: "Chenjia Kuang"
+format: html
+editor: visual
+embed-resources: true
+---
+
+```{r}
+knitr::opts_chunk$set(eval = FALSE, include  = TRUE)
+```
+
+## **Setup packages**
+
+```{r}
+library('tidytext')
+library('R.utils')
+library('tidyverse')
+library('ggplot2')
+library('data.table')
+library('dtplyr')
+library('dplyr')
+```
+
+```{r}
+library('readr')
+
+mt_samples <- read_csv("https://raw.githubusercontent.com/USCbiostats/data-science-data/master/00_mtsamples/mtsamples.csv")
+mt_samples <- mt_samples %>%
+  select(description, medical_specialty, transcription)
+
+head(mt_samples)
+```
+
+## **Question 1: What specialties do we have?**
+
+```{r}
+mt_samples %>%
+  count(medical_specialty, sort = TRUE)
+
+#There are 40 different specialties. 
+#The representation from each speciality is not evenly distributed. 
+```
+
+## **Question 2**
+
+```{r}
+mt_samples %>%
+  unnest_tokens(word, transcription) %>%
+  count(word, sort=TRUE) %>%
+  top_n(20, n) %>%
+  ggplot(aes(x = n, y = fct_reorder(word, n))) +
+  geom_col()
+
+#Articles, propositions, and conjunctions are often used and are considered to be natural parts of speech as we see from the result.
+```
+
+## Question 3
+
+```{r}
+#remove stopwords
+stop_words
+
+library(stringr)
+number_words <- as.character(seq(0, 100))
+
+
+mt_samples %>%
+  unnest_tokens(word, transcription)%>%
+  anti_join(stop_words, by = c("word")) %>%
+  count (word, sort=TRUE) %>%
+  top_n(20,n) %>%
+  ggplot(aes(x = n, y = fct_reorder(word, n))) +
+  geom_col()
+```
+
+```{r}
+#remove numbers
+mt_samples %>%
+  unnest_tokens(word, transcription) %>%
+  filter(!(word%in% as.character(seq(0,100))))%>%
+  anti_join(stop_words, by = c("word")) %>%
+  count(word, sort = TRUE) %>%
+  top_n(20, n) %>%
+  ggplot(aes(x = n, y = fct_reorder(word, n))) +
+  geom_col()
+
+#There is not a stop word or number in the plot. Patient is the most frequently used word after we removed the stop word. It give us a better idea of what the text is about.
+```
+
+## Question 4
+
+```{r}
+#tokenize into bi-grams
+mt_samples %>%
+  unnest_ngrams(token, transcription, n = 2) %>%
+  count(token, sort=TRUE) %>%
+  top_n(20, n) %>%
+  ggplot(aes(x = n, y = fct_reorder(token, n))) +
+  geom_col()
+```
+
+```{r}
+#tokenize into tri-grams
+mt_samples %>%
+  unnest_ngrams(token, transcription, n = 3) %>%
+  count(token, sort=TRUE) %>%
+  top_n(20, n) %>%
+  ggplot(aes(x = n, y = fct_reorder(token, n))) +
+  geom_col()
+```
+
+## Question 5
+
+```{r}
+#Pick a word and count the words that appears after and before it.
+chosen_word <- "patient"
+
+mt_samples %>%
+  unnest_tokens(word, transcription) %>%
+  filter(word == chosen_word) %>%
+  select(-description) %>%
+  group_by(medical_specialty) %>%
+  count(word, sort=TRUE) %>%
+  arrange(word) %>%
+  summarise(word_before = lag(word),
+            chosen_word = word,
+            word_after  = lead(word))
+```
+
+## Question 6
+
+```{r}
+mt_samples %>% 
+  unnest_tokens(token, transcription) %>%
+  anti_join(stop_words, by = c("token" = "word")) %>%
+  group_by(medical_specialty) %>%
+  count(token) %>%
+  top_n(5,n)
+  
+#For the Allergy/Immunology specialty, the most used word is allergies.
+#For the Autopsy and Cardiovascular/pulmonary specialties, the most used word is 1. 
+#For the Bariatrics specialty, the most used word is gastric. 
+#For the Cardiovascular/pulmonary specialty, the most used word is 1. 
+#For the Chirpractic specialty, the most used word is dr. 
+```
