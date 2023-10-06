@@ -6,10 +6,6 @@ editor: visual
 embed-resources: true
 ---
 
-```{r}
-knitr::opts_chunk$set(eval = FALSE, include  = TRUE)
-```
-
 ## **Setup packages**
 
 ```{r}
